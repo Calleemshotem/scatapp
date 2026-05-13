@@ -6,45 +6,36 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
+// ADD THESE TWO NEW LINES HERE:
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+// This tells the server your Cloudinary identity
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-// Ensure uploads directory exists
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-
-// Data persistence file
-const DATA_FILE = 'data.json';
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+// This tells Multer to send files to the Cloud instead of your computer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'scatapp_music',
+    resource_type: 'video', // Cloudinary uses 'video' category for audio files
+    format: async (req, file) => 'mp3', 
   },
-  filename: (req, file, cb) => {
-    const uniqueName = uuidv4() + path.extname(file.originalname);
-    cb(null, uniqueName);
-  }
 });
 
-const upload = multer({ 
-  storage,
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /audio\/(mpeg|mp3|wav|ogg|webm)/;
-    if (allowedTypes.test(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only audio files are allowed'));
-    }
-  }
-});
+const upload = multer({ storage: storage });
 
+// That's it! Cloudinary handles the naming and the filtering for you.
 // Load data from file or initialize empty
 let tracks = [];
 let playlists = [];
@@ -98,7 +89,7 @@ app.post('/api/tracks/upload', upload.single('audio'), (req, res) => {
     id: uuidv4(),
     title: req.body.title || req.file.originalname.replace(/\.[^/.]+$/, ''),
     artist: req.body.artist || 'Unknown Artist',
-    url: `/uploads/${req.file.filename}`,
+    url: req.file.path,
     duration: 0,
     createdAt: new Date()
   };
