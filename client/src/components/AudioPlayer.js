@@ -62,8 +62,8 @@ const AudioPlayer = () => {
 
   return (
     <audio
-      ref={audioRef}
-      src={`https://scatapp-production.up.railway.app${currentTrack.url}`}
+        ref={audioRef} src={currentTrack?.url.startsWith('http')   ? currentTrack.url   : `https://scatapp-production.up.railway.app${currentTrack.url}`}
+ 
       onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
     />
   );
