@@ -1,0 +1,13 @@
+{
+  "tracks": [
+    {
+      "id": "d85c8337-e8e0-4da6-b847-343f29867a21",
+      "title": "Cuttin Up",
+      "artist": "Lud Foe",
+      "url": "http://localhost:5000/uploads/fcb253bb-0542-422e-9674-3d79cbfeb894.mp3",
+      "duration": 0,
+      "createdAt": "2026-05-13T17:11:34.485Z"
+    }
+  ],
+  "playlists": []
+}
