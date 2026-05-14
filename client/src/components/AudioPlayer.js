@@ -1,8 +1,9 @@
-import React, { useContext, useRef, useEffect } from 'react';
+import React, { useContext, useRef, useEffect, useState } from 'react';
 import { MusicContext } from '../context/MusicContext';
 
 const AudioPlayer = () => {
   const audioRef = useRef(null);
+  const [repeat, setRepeat] = useState(false);
   const {
     currentTrack,
     isPlaying,
@@ -38,7 +39,14 @@ const AudioPlayer = () => {
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => setDuration(audio.duration);
-    const handleEnded = () => next();
+    const handleEnded = () => {
+      if (repeat) {
+        audio.currentTime = 0;
+        audio.play().catch(err => console.log('Play error:', err));
+      } else {
+        next();
+      }
+    };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -60,12 +68,26 @@ const AudioPlayer = () => {
 
   if (!currentTrack) return null;
 
+  const buttonClasses = repeat
+    ? 'bg-red-600 text-white hover:bg-red-500'
+    : 'bg-gray-700 text-white hover:bg-gray-600';
+
   return (
-    <audio
-        ref={audioRef} src={currentTrack?.url.startsWith('http')   ? currentTrack.url   : `https://scatapp-production.up.railway.app${currentTrack.url}`}
- 
-      onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
-    />
+    <div className="relative">
+      <audio
+        ref={audioRef}
+        src={currentTrack?.url.startsWith('http') ? currentTrack.url : `https://scatapp-production.up.railway.app${currentTrack.url}`}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+      />
+      <button
+        type="button"
+        onClick={() => setRepeat(!repeat)}
+        className={`fixed bottom-28 right-4 z-50 rounded-full px-4 py-2 text-sm font-semibold transition ${buttonClasses}`}
+        title="Repeat"
+      >
+        {repeat ? 'Repeat On' : 'Repeat Off'}
+      </button>
+    </div>
   );
 };
 
