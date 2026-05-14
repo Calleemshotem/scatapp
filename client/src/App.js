@@ -7,6 +7,7 @@ import UploadModal from './components/UploadModal';
 import PlaylistModal from './components/PlaylistModal';
 import TrackList from './components/TrackList';
 import PlaylistDropdown from './components/PlaylistDropdown';
+import AccountModal from './components/AccountModal';
 import { api } from './api';
 
 const AppContent = () => {
@@ -17,6 +18,8 @@ const AppContent = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
 
@@ -54,6 +57,27 @@ const AppContent = () => {
     setSearchQuery(query);
     fetchTracks(query);
   };
+
+  const handleAuthSuccess = (authenticatedUser) => {
+    setUser(authenticatedUser);
+    window.localStorage.setItem('scat-user', JSON.stringify(authenticatedUser));
+    setShowAccountModal(false);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    window.localStorage.removeItem('scat-user');
+    setShowAccountModal(true);
+  };
+
+  useEffect(() => {
+    const savedUser = window.localStorage.getItem('scat-user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    } else {
+      setShowAccountModal(true);
+    }
+  }, []);
 
   const handlePlaylistClick = (playlist) => {
     setCurrentPlaylist(playlist);
@@ -163,7 +187,16 @@ const AppContent = () => {
                 className={`w-full px-4 py-2 ${isDarkTheme ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-200 border-gray-300 text-gray-900 placeholder-gray-600'} border rounded-full focus:outline-none ${isDarkTheme ? 'focus:border-red-500' : 'focus:border-purple-500'} transition`}
               />
             </div>
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className={`rounded-full px-3 py-2 text-sm font-medium ${isDarkTheme ? 'bg-gray-800 text-red-300' : 'bg-gray-200 text-purple-700'}`}>
+                {user ? `Hi, ${user.displayName || user.email}` : 'Welcome'}
+              </div>
+              <button
+                onClick={user ? handleLogout : () => setShowAccountModal(true)}
+                className={`px-4 py-2 rounded-full transition transform hover:scale-105 ${isDarkTheme ? 'bg-gray-800 text-white' : 'bg-gray-300 text-gray-900'}`}
+              >
+                {user ? 'Sign Out' : 'Sign In'}
+              </button>
               <button
                 onClick={() => setIsDarkTheme(!isDarkTheme)}
                 className={`px-4 py-2 rounded-full transition transform hover:scale-105 ${isDarkTheme ? 'bg-gray-800 text-yellow-400' : 'bg-gray-300 text-gray-900'}`}
@@ -251,6 +284,13 @@ const AppContent = () => {
         isOpen={showPlaylistModal}
         onClose={() => setShowPlaylistModal(false)}
         onPlaylistCreated={fetchPlaylists}
+        isDarkTheme={isDarkTheme}
+      />
+
+      <AccountModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        onAuthSuccess={handleAuthSuccess}
         isDarkTheme={isDarkTheme}
       />
 
