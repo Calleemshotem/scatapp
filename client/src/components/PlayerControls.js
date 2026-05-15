@@ -79,8 +79,9 @@ const PlayerControls = ({ isDarkTheme = true }) => {
             </button>
 
             <button
+              onPointerDown={togglePlay}
               onClick={togglePlay}
-              className={`bg-gradient-to-r ${isDarkTheme ? 'from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' : 'from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600'} text-white rounded-full p-3 transition transform hover:scale-110 shadow-lg`}
+              className={`bg-gradient-to-r ${isDarkTheme ? 'from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' : 'from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600'} text-white rounded-full p-3 transition transform hover:scale-110 shadow-lg cursor-pointer`}
               title={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? (

@@ -163,7 +163,7 @@ const AppContent = () => {
   const accentHover = isDarkTheme ? 'hover:bg-red-600' : 'hover:bg-purple-600';
 
   return (
-    <div className={`flex flex-col md:flex-row h-screen ${bgColor} text-white overflow-hidden transition-colors`}>
+    <div className={`flex flex-col md:flex-row h-screen md:h-[100dvh] ${bgColor} text-white overflow-hidden transition-colors`}>
       {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab}
@@ -221,7 +221,7 @@ const AppContent = () => {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-40">
+        <div className="flex-1 overflow-y-auto scrollable p-4 md:p-6 pb-40">
           <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className={`text-center text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'} animate-pulse-custom`}>

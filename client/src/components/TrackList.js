@@ -47,8 +47,9 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
       {tracks.map((track, index) => (
         <div
           key={track.id}
-          className={`flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
+          onPointerDown={() => handlePlayTrack(track)}
           onClick={() => handlePlayTrack(track)}
+          className={`flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
           style={{ animationDelay: `${index * 0.1}s` }}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
