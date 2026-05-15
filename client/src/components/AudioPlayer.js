@@ -44,7 +44,15 @@ const AudioPlayer = () => {
         audio.currentTime = 0;
         audio.play().catch(err => console.log('Play error:', err));
       } else {
+        // Advance to next track
         next();
+        // Ensure the newly-loaded track actually starts playing.
+        // `next()` may set `isPlaying` to true already, but if it was
+        // already true, forcing play here ensures playback begins.
+        setTimeout(() => {
+          const a = audioRef.current;
+          if (a) a.play().catch(err => console.log('Play error:', err));
+        }, 150);
       }
     };
 
@@ -57,7 +65,7 @@ const AudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [next, setCurrentTime, setDuration]);
+  }, [next, setCurrentTime, setDuration, repeat]);
 
   const handleSeek = (e) => {
     const audio = audioRef.current;
