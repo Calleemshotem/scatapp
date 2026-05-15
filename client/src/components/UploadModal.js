@@ -4,14 +4,14 @@ import { MusicContext } from '../context/MusicContext';
 
 const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) => {
   const [formData, setFormData] = useState({ title: '', artist: '', album: '' });
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please select an audio file');
+    if (!files || files.length === 0) {
+      setError('Please select at least one audio file');
       return;
     }
 
@@ -20,14 +20,15 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) =
 
     try {
       const uploadData = new FormData();
-      uploadData.append('audio', file);
-      uploadData.append('title', formData.title || file.name);
+      // Append each selected file under the same field name 'audio'
+      files.forEach((f) => uploadData.append('audio', f));
+      // Apply artist/album to the batch; title will default to filename on server
       uploadData.append('artist', formData.artist || 'Unknown Artist');
       uploadData.append('album', formData.album || 'Unknown Album');
 
       await api.uploadTrack(uploadData);
       setFormData({ title: '', artist: '', album: '' });
-      setFile(null);
+      setFiles([]);
       onUploadSuccess();
       onClose();
     } catch (err) {
@@ -67,10 +68,12 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) =
             <input
               type="file"
               accept="audio/*"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
               className={`w-full px-3 py-2 ${inputBg} border rounded text-white transition`}
               required
             />
+            <p className="text-sm text-gray-400 mt-2">{files.length > 0 ? `${files.length} file(s) selected` : 'No files selected'}</p>
           </div>
 
           <div>

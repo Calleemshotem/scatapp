@@ -79,25 +79,37 @@ app.get('/api/tracks', (req, res) => {
   res.json(filtered);
 });
 
-// Upload track
-app.post('/api/tracks/upload', upload.single('audio'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+// Upload track(s) - supports multiple files under field name 'audio'
+app.post('/api/tracks/upload', upload.array('audio', 50), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded' });
   }
 
-  const track = {
-    id: uuidv4(),
-    title: req.body.title || req.file.originalname.replace(/\.[^/.]+$/, ''),
-    artist: req.body.artist || 'Unknown Artist',
-    album: req.body.album || 'Unknown Album',
-    url: req.file.path,
-    duration: 0,
-    createdAt: new Date()
-  };
+  const created = [];
+  const artistFromBody = req.body.artist || 'Unknown Artist';
+  const albumFromBody = req.body.album || 'Unknown Album';
 
-  tracks.push(track);
+  req.files.forEach((file) => {
+    const title = (req.body.title && req.files.length === 1)
+      ? req.body.title
+      : (file.originalname ? file.originalname.replace(/\.[^/.]+$/, '') : 'Untitled');
+
+    const track = {
+      id: uuidv4(),
+      title,
+      artist: artistFromBody,
+      album: albumFromBody,
+      url: file.path,
+      duration: 0,
+      createdAt: new Date()
+    };
+
+    tracks.push(track);
+    created.push(track);
+  });
+
   saveData(); // Save to file
-  res.status(201).json(track);
+  res.status(201).json(created);
 });
 
 // Get all playlists
