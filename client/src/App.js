@@ -47,6 +47,7 @@ const AppContent = () => {
   const fetchPlaylists = async () => {
     try {
       const response = await api.getPlaylists();
+      console.log('Fetched playlists:', response.data);
       setPlaylists(response.data);
     } catch (err) {
       console.error('Error fetching playlists:', err);
@@ -80,7 +81,21 @@ const AppContent = () => {
   }, []);
 
   const handlePlaylistClick = (playlist) => {
-    setCurrentPlaylist(playlist);
+    console.log('Switching to playlist:', playlist.id, 'Name:', playlist.name, 'Track IDs:', playlist.trackIds);
+    // Ensure trackIds are strings for consistency
+    const normalizedPlaylist = {
+      ...playlist,
+      trackIds: (playlist.trackIds || []).map(id => String(id)),
+      // Pre-filter tracks to ensure they match
+      tracks: (playlist.tracks || []).filter(track => {
+        const trackIdStr = String(track.id);
+        const hasTrack = playlist.trackIds?.some(pId => String(pId) === trackIdStr);
+        console.log(`Track ${track.title} (ID: ${track.id}, type: ${typeof track.id}) - in playlist: ${hasTrack}`);
+        return hasTrack;
+      })
+    };
+    console.log('Normalized playlist:', normalizedPlaylist);
+    setCurrentPlaylist(normalizedPlaylist);
     setActiveTab(`playlist-${playlist.id}`);
   };
 
@@ -121,6 +136,8 @@ const AppContent = () => {
     }
 
     if (activeTab.startsWith('playlist-') && currentPlaylist) {
+      const playlistTracks = currentPlaylist.tracks || [];
+      console.log('Rendering playlist view:', currentPlaylist.id, 'Tracks:', playlistTracks.length);
       return (
         <div className="animate-slideInUp">
           <div className="flex items-center justify-between mb-6">
@@ -129,12 +146,12 @@ const AppContent = () => {
                 {currentPlaylist.name}
               </h2>
               <p className={`text-sm mt-1 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-                {currentPlaylist.trackIds?.length || 0} items
+                {playlistTracks.length} items
               </p>
             </div>
             <button
               onClick={() => handleDeletePlaylist(currentPlaylist.id)}
-              className={`${isDarkTheme ? 'text-red-500 hover:text-red-400' : 'text-purple-500 hover:text-purple-400'} p-2 transition`}
+              className={`${isDarkTheme ? 'text-red-500 hover:text-red-400' : 'text-purple-500 hover:text-purple-400'} p-2 transition cursor-pointer`}
               title="Delete"
             >
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -143,7 +160,7 @@ const AppContent = () => {
             </button>
           </div>
           <TrackList 
-            tracks={currentPlaylist.tracks || []} 
+            tracks={playlistTracks} 
             showPlaylistActions={true}
             playlistId={currentPlaylist.id}
             onTrackRemoved={fetchPlaylists}
@@ -163,7 +180,7 @@ const AppContent = () => {
   const accentHover = isDarkTheme ? 'hover:bg-red-600' : 'hover:bg-purple-600';
 
   return (
-    <div className={`flex flex-col md:flex-row h-screen md:h-[100dvh] ${bgColor} text-white overflow-hidden transition-colors`}>
+    <div className={`flex flex-col md:flex-row h-screen md:h-[100dvh] ${bgColor} text-white overflow-hidden transition-colors relative`}>
       {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab}
@@ -174,9 +191,9 @@ const AppContent = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 flex flex-col">
+      <main className="flex-1 md:ml-64 flex flex-col relative z-0">
         {/* Header */}
-        <header className={`${headerBg} ${isDarkTheme ? 'border-gray-800' : 'border-gray-200'} border-b p-4 md:p-6 sticky top-0 z-40 transition-colors`}>
+        <header className={`${headerBg} ${isDarkTheme ? 'border-gray-800' : 'border-gray-200'} border-b p-4 md:p-6 sticky top-0 z-30 transition-colors`}>
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex-1">
               <input
@@ -221,7 +238,7 @@ const AppContent = () => {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollable p-4 md:p-6 pb-40">
+        <div className="flex-1 overflow-y-auto scrollable p-4 md:p-6 pb-40 relative z-0">
           <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className={`text-center text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'} animate-pulse-custom`}>
@@ -235,7 +252,7 @@ const AppContent = () => {
       </main>
 
       {/* Mobile Navigation */}
-      <nav className={`md:hidden fixed bottom-20 left-0 right-0 ${isDarkTheme ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-t flex justify-around p-2 transition-colors`}>
+      <nav className={`md:hidden fixed bottom-20 left-0 right-0 ${isDarkTheme ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-t flex justify-around p-2 transition-colors z-20`}>
         <button
           onClick={() => {
             setActiveTab('discover');
@@ -273,26 +290,28 @@ const AppContent = () => {
       </nav>
 
       {/* Modals */}
-      <UploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onUploadSuccess={fetchTracks}
-        isDarkTheme={isDarkTheme}
-      />
+      <div className="relative z-40">
+        <UploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onUploadSuccess={fetchTracks}
+          isDarkTheme={isDarkTheme}
+        />
 
-      <PlaylistModal
-        isOpen={showPlaylistModal}
-        onClose={() => setShowPlaylistModal(false)}
-        onPlaylistCreated={fetchPlaylists}
-        isDarkTheme={isDarkTheme}
-      />
+        <PlaylistModal
+          isOpen={showPlaylistModal}
+          onClose={() => setShowPlaylistModal(false)}
+          onPlaylistCreated={fetchPlaylists}
+          isDarkTheme={isDarkTheme}
+        />
 
-      <AccountModal
-        isOpen={showAccountModal}
-        onClose={() => setShowAccountModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-        isDarkTheme={isDarkTheme}
-      />
+        <AccountModal
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+          isDarkTheme={isDarkTheme}
+        />
+      </div>
 
       {/* Players */}
       <AudioPlayer />
