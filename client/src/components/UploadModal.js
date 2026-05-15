@@ -3,7 +3,7 @@ import { api } from '../api';
 import { MusicContext } from '../context/MusicContext';
 
 const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) => {
-  const [formData, setFormData] = useState({ title: '', artist: '' });
+  const [formData, setFormData] = useState({ title: '', artist: '', album: '' });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,9 +23,10 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) =
       uploadData.append('audio', file);
       uploadData.append('title', formData.title || file.name);
       uploadData.append('artist', formData.artist || 'Unknown Artist');
+      uploadData.append('album', formData.album || 'Unknown Album');
 
       await api.uploadTrack(uploadData);
-      setFormData({ title: '', artist: '' });
+      setFormData({ title: '', artist: '', album: '' });
       setFile(null);
       onUploadSuccess();
       onClose();

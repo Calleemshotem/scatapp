@@ -60,6 +60,9 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
             <div className="flex-1 min-w-0">
               <p className={`${textColor} font-medium truncate`}>{track.title}</p>
               <p className={`${textMuted} text-sm truncate`}>{track.artist}</p>
+              {track.album && (
+                <p className={`${textMuted} text-xs truncate`}>{track.album}</p>
+              )}
             </div>
           </div>
 

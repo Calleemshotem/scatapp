@@ -89,6 +89,7 @@ app.post('/api/tracks/upload', upload.single('audio'), (req, res) => {
     id: uuidv4(),
     title: req.body.title || req.file.originalname.replace(/\.[^/.]+$/, ''),
     artist: req.body.artist || 'Unknown Artist',
+    album: req.body.album || 'Unknown Album',
     url: req.file.path,
     duration: 0,
     createdAt: new Date()
