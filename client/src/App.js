@@ -185,28 +185,41 @@ const AppContent = () => {
   const addTrackToPlaylist = async (trackId, playlistId) => {
     const trackIdString = trackId?.toString?.() ?? '';
     const playlistIdString = playlistId?.toString?.() ?? '';
-    const existing = playlists.find((playlist) => playlist.id?.toString() === playlistIdString);
-    if (!existing) return;
-    if ((existing.trackIds || []).map((id) => id.toString()).includes(trackIdString)) return;
+    console.log('Context menu playlist click. Track:', trackIdString, 'Playlist:', playlistIdString);
 
-    console.log('Successfully added track:', trackIdString, 'to playlist:', playlistIdString);
+    const active = playlists.find((playlist) => playlist.id?.toString() === playlistIdString);
+    if (!active) {
+      console.warn('Playlist not found for assignment:', playlistIdString);
+      return;
+    }
+
+    const existingTrackIds = Array.isArray(active.trackIds) ? active.trackIds.map((id) => id.toString()) : [];
+    if (existingTrackIds.includes(trackIdString)) {
+      console.warn('Track already exists in playlist:', trackIdString, playlistIdString);
+      setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
+      return;
+    }
 
     const updatedPlaylists = playlists.map((playlist) => {
       if (playlist.id?.toString() !== playlistIdString) return playlist;
-      const existingTrackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds : [];
+      const playlistTrackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds.map((id) => id.toString()) : [];
       return {
         ...playlist,
-        trackIds: [...new Set([...existingTrackIds.map((id) => id.toString()), trackIdString])],
+        trackIds: [...new Set([...playlistTrackIds, trackIdString])],
       };
     });
 
     setPlaylists(updatedPlaylists);
-
     try {
       window.localStorage.setItem('scatapp_playlists', JSON.stringify(updatedPlaylists));
     } catch (e) {
       console.warn('Could not persist playlists to localStorage:', e);
     }
+
+    const addedTrack = tracks.find((track) => track.id?.toString() === trackIdString);
+    setNotification(`${addedTrack?.title || 'Track'} added to playlist!`);
+    setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
+    console.log('Current Playlists State:', updatedPlaylists);
 
     if (navigator.onLine) {
       try {
@@ -215,10 +228,6 @@ const AppContent = () => {
         console.warn('Failed to sync add-to-playlist online, saving locally:', err);
       }
     }
-
-    const addedTrack = tracks.find((track) => track.id?.toString() === trackIdString);
-    setNotification(`${addedTrack?.title || 'Track'} added to playlist!`);
-    setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
   };
 
   const handleContextMenu = (event, trackId) => {
@@ -417,33 +426,32 @@ const AppContent = () => {
         {contextMenu.visible && (
           <div
             className="fixed z-50 rounded-2xl border border-slate-700 bg-slate-950 p-2 shadow-2xl"
-            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 220 }}
+            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 240 }}
             onContextMenu={(event) => event.preventDefault()}
           >
-            <div className="group relative rounded-xl p-2 hover:bg-white/5 transition cursor-default">
-              <div className="flex items-center justify-between text-sm text-white font-medium">
+            <div className="rounded-xl p-2 bg-slate-950">
+              <div className="mb-3 flex items-center justify-between text-sm text-white font-medium">
                 <span>Add to Playlist</span>
-                <span className="text-slate-400">›</span>
               </div>
-              <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute left-full top-0 ml-2 w-56 rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl transition-all duration-150">
-                {playlists.length === 0 ? (
-                  <div className="p-3 text-sm text-slate-400">No playlists yet</div>
-                ) : (
-                  playlists.map((playlist) => (
-                    <button
-                      key={playlist.id}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        addTrackToPlaylist(contextMenu.trackId, playlist.id);
-                      }}
-                      className="w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-white/5 transition"
-                    >
-                      {playlist.name}
-                    </button>
-                  ))
-                )}
-              </div>
+              {playlists.length === 0 ? (
+                <div className="p-3 text-sm text-slate-400">No playlists yet</div>
+              ) : (
+                playlists.map((playlist) => (
+                  <button
+                    key={playlist.id}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      console.log('Context menu item clicked. Track:', contextMenu.trackId, 'Playlist:', playlist.id);
+                      addTrackToPlaylist(contextMenu.trackId, playlist.id);
+                    }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    className="w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-white/5 transition"
+                  >
+                    {playlist.name}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}
