@@ -34,7 +34,6 @@ const AppContent = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, trackId: null });
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
@@ -185,7 +184,7 @@ const AppContent = () => {
   const addTrackToPlaylist = async (trackId, playlistId) => {
     const trackIdString = trackId?.toString?.() ?? '';
     const playlistIdString = playlistId?.toString?.() ?? '';
-    console.log('Context menu playlist click. Track:', trackIdString, 'Playlist:', playlistIdString);
+    console.log('Add-to-playlist requested. Track:', trackIdString, 'Playlist:', playlistIdString);
 
     const active = playlists.find((playlist) => playlist.id?.toString() === playlistIdString);
     if (!active) {
@@ -196,7 +195,6 @@ const AppContent = () => {
     const existingTrackIds = Array.isArray(active.trackIds) ? active.trackIds.map((id) => id.toString()) : [];
     if (existingTrackIds.includes(trackIdString)) {
       console.warn('Track already exists in playlist:', trackIdString, playlistIdString);
-      setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
       return;
     }
 
@@ -218,7 +216,6 @@ const AppContent = () => {
 
     const addedTrack = tracks.find((track) => track.id?.toString() === trackIdString);
     setNotification(`${addedTrack?.title || 'Track'} added to playlist!`);
-    setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
     console.log('Current Playlists State:', updatedPlaylists);
 
     if (navigator.onLine) {
@@ -230,29 +227,7 @@ const AppContent = () => {
     }
   };
 
-  const handleContextMenu = (event, trackId) => {
-    event.preventDefault();
-    setContextMenu({ visible: true, x: event.clientX, y: event.clientY, trackId });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setContextMenu((prev) => prev.visible ? { ...prev, visible: false } : prev);
-    };
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setContextMenu((prev) => prev.visible ? { ...prev, visible: false } : prev);
-      }
-    };
-
-    window.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('keydown', handleEscape);
-
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
+  // Right-click context menu removed; per-row + button dropdowns are used instead.
 
   useEffect(() => {
     if (!notification) return undefined;
@@ -269,7 +244,6 @@ const AppContent = () => {
           playlist={activePlaylist}
           tracks={tracks}
           onRemoveFromPlaylist={fetchPlaylists}
-          onTrackContextMenu={handleContextMenu}
           isDarkTheme={isDarkTheme}
         />
       );
@@ -280,7 +254,7 @@ const AppContent = () => {
         <h2 className={`text-2xl font-bold mb-6 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
           {currentView.type === 'home' ? 'Home' : 'Browse'}
         </h2>
-        <TrackList tracks={tracks} onTrackRemoved={fetchTracks} onTrackContextMenu={handleContextMenu} isDarkTheme={isDarkTheme} />
+        <TrackList tracks={tracks} onTrackRemoved={fetchTracks} playlists={playlists} addTrackToPlaylist={addTrackToPlaylist} isDarkTheme={isDarkTheme} />
       </div>
     );
   };
@@ -423,38 +397,7 @@ const AppContent = () => {
           isDarkTheme={isDarkTheme}
         />
 
-        {contextMenu.visible && (
-          <div
-            className="fixed z-50 rounded-2xl border border-slate-700 bg-slate-950 p-2 shadow-2xl"
-            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 240 }}
-            onContextMenu={(event) => event.preventDefault()}
-          >
-            <div className="rounded-xl p-2 bg-slate-950">
-              <div className="mb-3 flex items-center justify-between text-sm text-white font-medium">
-                <span>Add to Playlist</span>
-              </div>
-              {playlists.length === 0 ? (
-                <div className="p-3 text-sm text-slate-400">No playlists yet</div>
-              ) : (
-                playlists.map((playlist) => (
-                  <button
-                    key={playlist.id}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      console.log('Context menu item clicked. Track:', contextMenu.trackId, 'Playlist:', playlist.id);
-                      addTrackToPlaylist(contextMenu.trackId, playlist.id);
-                    }}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    className="w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-white/5 transition"
-                  >
-                    {playlist.name}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        {/* Per-row + button dropdowns replace the old custom right-click menu */}
       </div>
 
       {/* Players */}

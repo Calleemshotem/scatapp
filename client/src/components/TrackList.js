@@ -1,10 +1,12 @@
 
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { MusicContext } from '../context/MusicContext';
 import { api } from '../api';
 
-const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, onTrackContextMenu = null, isDarkTheme = true }) => {
+const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, playlists = [], addTrackToPlaylist = null, isDarkTheme = true }) => {
   const { playTrack } = useContext(MusicContext);
+  const [openFor, setOpenFor] = useState(null);
+  const containerRef = useRef(null);
 
   const handlePlayTrack = (track) => {
     playTrack(track, tracks);
@@ -29,6 +31,22 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
     }
   };
 
+  const handlePlusClick = (e, track) => {
+    e.stopPropagation();
+    setOpenFor((prev) => (prev === track.id ? null : track.id));
+  };
+
+  useEffect(() => {
+    const handleDocClick = (e) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(e.target)) {
+        setOpenFor(null);
+      }
+    };
+    document.addEventListener('mousedown', handleDocClick);
+    return () => document.removeEventListener('mousedown', handleDocClick);
+  }, []);
+
   if (!tracks || tracks.length === 0) {
     return (
       <div className={`text-center py-12 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -44,17 +62,13 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
   const gradient = isDarkTheme ? 'from-red-400 to-red-600' : 'from-purple-400 to-purple-600';
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" ref={containerRef}>
       {tracks.map((track, index) => (
         <div
           key={track.id}
           onPointerDown={() => handlePlayTrack(track)}
           onClick={() => handlePlayTrack(track)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            if (onTrackContextMenu) onTrackContextMenu(e, track.id);
-          }}
-          className={`flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
+          className={`relative flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
           style={{ animationDelay: `${index * 0.1}s` }}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -72,7 +86,37 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
             </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition">
+          <div className="flex items-center gap-2 ml-4 opacity-100 transition">
+            <button
+              onClick={(e) => handlePlusClick(e, track)}
+              className="text-gray-400 hover:text-white transition-colors duration-200 p-2 cursor-pointer text-xl"
+              title="Add to playlist"
+            >
+              +
+            </button>
+
+            {openFor === track.id && (
+              <div className="absolute right-6 top-full mt-2 bg-[#282828] text-white border border-[#3e3e3e] rounded-md shadow-2xl py-1 w-48 z-50">
+                {playlists.length === 0 ? (
+                  <div className="px-4 py-2 text-sm text-slate-400">No playlists</div>
+                ) : (
+                  playlists.map((pl) => (
+                    <button
+                      key={pl.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenFor(null);
+                        if (addTrackToPlaylist) addTrackToPlaylist(track.id, pl.id);
+                      }}
+                      className="w-full text-left hover:bg-[#3e3e3e] px-4 py-2 text-sm"
+                    >
+                      {pl.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
             {showPlaylistActions && (
               <button
                 onClick={(e) => {
