@@ -13,7 +13,7 @@ export const api = {
   createPlaylist: (name) => axios.post('https://scatapp-production.up.railway.app/api/playlists', { name }),
   deletePlaylist: (playlistId) => axios.delete(`https://scatapp-production.up.railway.app/api/playlists/${playlistId}`),
   addTrackToPlaylist: (playlistId, trackId) => 
-    axios.post(`https://scatapp-production.up.railway.app/api/playlists/${playlistId}/tracks`, { trackId }),
+    axios.post(`https://scatapp-production.up.railway.app/api/playlists/${playlistId}/add`, { trackId }),
   removeTrackFromPlaylist: (playlistId, trackId) =>
     axios.delete(`https://scatapp-production.up.railway.app/api/playlists/${playlistId}/tracks/${trackId}`),
 };

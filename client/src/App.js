@@ -35,6 +35,7 @@ const AppContent = () => {
   const [loading, setLoading] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, trackId: null });
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     document.body.className = isDarkTheme ? 'dark-theme' : 'light-theme';
@@ -215,6 +216,8 @@ const AppContent = () => {
       }
     }
 
+    const addedTrack = tracks.find((track) => track.id?.toString() === trackIdString);
+    setNotification(`${addedTrack?.title || 'Track'} added to playlist!`);
     setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
   };
 
@@ -242,7 +245,13 @@ const AppContent = () => {
     };
   }, []);
 
-  const activePlaylist = playlists.find((playlist) => playlist.id === currentView.id);
+  useEffect(() => {
+    if (!notification) return undefined;
+    const timeout = setTimeout(() => setNotification(null), 3000);
+    return () => clearTimeout(timeout);
+  }, [notification]);
+
+  const activePlaylist = playlists.find((playlist) => playlist.id?.toString() === String(currentView.id));
 
   const renderContent = () => {
     if (currentView.type === 'playlist' && activePlaylist) {
@@ -329,6 +338,12 @@ const AppContent = () => {
             </div>
           </div>
         </header>
+
+        {notification && (
+          <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-md bg-[#1DB954] px-4 py-3 text-white font-semibold shadow-xl transition-opacity duration-300">
+            {notification}
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto scrollable p-4 md:p-6 pb-40 relative z-0">
