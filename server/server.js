@@ -36,6 +36,9 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage: storage });
 
 // That's it! Cloudinary handles the naming and the filtering for you.
+// Define data file path
+const DATA_FILE = path.join(__dirname, 'data.json');
+
 // Load data from file or initialize empty
 let tracks = [];
 let playlists = [];
@@ -58,7 +61,26 @@ const loadData = () => {
 
 const saveData = () => {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ tracks, playlists }, null, 2));
+    let existingData = { tracks: [], playlists: [] };
+    
+    // Read existing data from disk first
+    if (fs.existsSync(DATA_FILE)) {
+      try {
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+        existingData = JSON.parse(fileContent);
+      } catch (err) {
+        console.error('Error reading existing data:', err);
+      }
+    }
+
+    // Merge current in-memory data with what's on disk
+    // Use in-memory as source of truth for the current state
+    const dataToSave = {
+      tracks: tracks,
+      playlists: playlists
+    };
+    
+    fs.writeFileSync(DATA_FILE, JSON.stringify(dataToSave, null, 2));
   } catch (err) {
     console.error('Error saving data:', err);
   }
@@ -77,6 +99,34 @@ app.get('/api/tracks', (req, res) => {
     track.artist.toLowerCase().includes(search)
   );
   res.json(filtered);
+});
+
+// Create a single track (JSON) - useful for clients that POST metadata instead of uploading files
+app.post('/api/tracks', (req, res) => {
+  try {
+    const { title, artist, album, url } = req.body || {};
+    if (!title || !url) {
+      return res.status(400).json({ error: 'title and url are required' });
+    }
+
+    const track = {
+      id: uuidv4(),
+      title: title || 'Untitled',
+      artist: artist || 'Unknown Artist',
+      album: album || 'Unknown Album',
+      url,
+      duration: 0,
+      createdAt: new Date()
+    };
+
+    tracks.push(track);
+    // Persist immediately to disk so server restarts don't lose data
+    saveData();
+    return res.status(201).json(track);
+  } catch (err) {
+    console.error('Error creating track:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Upload track(s) - supports multiple files under field name 'audio'

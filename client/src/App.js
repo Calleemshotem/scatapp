@@ -36,9 +36,26 @@ const AppContent = () => {
     try {
       setLoading(true);
       const response = await api.getTracks(search);
-      setTracks(response.data);
+      const data = response.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        setTracks(data);
+        try {
+          window.localStorage.setItem('scatapp_backup', JSON.stringify(data));
+        } catch (e) {
+          console.warn('Could not write backup to localStorage:', e);
+        }
+      } else {
+        // API returned empty list - try loading backup
+        const backup = window.localStorage.getItem('scatapp_backup');
+        if (backup) setTracks(JSON.parse(backup));
+        else setTracks([]);
+      }
     } catch (err) {
       console.error('Error fetching tracks:', err);
+      const backup = window.localStorage.getItem('scatapp_backup');
+      if (backup) {
+        try { setTracks(JSON.parse(backup)); } catch (e) { console.error('Invalid backup data', e); setTracks([]); }
+      }
     } finally {
       setLoading(false);
     }

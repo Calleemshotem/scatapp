@@ -32,7 +32,32 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, isDarkTheme = true }) =
       onUploadSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Upload failed');
+      const message = err.response?.data?.error || 'Upload failed';
+      setError(message);
+
+      // If upload failed due to network/offline, fall back to storing tracks in localStorage backup
+      try {
+        const isNetworkError = !err.response;
+        if (isNetworkError && files && files.length > 0) {
+          const existing = JSON.parse(window.localStorage.getItem('scatapp_backup') || '[]');
+          const toAdd = files.map((f) => ({
+            id: `local-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+            title: f.name.replace(/\.[^/.]+$/, ''),
+            artist: formData.artist || 'Unknown Artist',
+            album: formData.album || 'Unknown Album',
+            url: URL.createObjectURL(f),
+            duration: 0,
+            createdAt: new Date()
+          }));
+          const merged = existing.concat(toAdd);
+          window.localStorage.setItem('scatapp_backup', JSON.stringify(merged));
+          // Notify parent to refresh (will pick up backup when API unreachable)
+          onUploadSuccess && onUploadSuccess();
+          onClose && onClose();
+        }
+      } catch (e) {
+        console.warn('Could not save offline backup:', e);
+      }
     } finally {
       setLoading(false);
     }
