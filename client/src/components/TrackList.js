@@ -6,7 +6,7 @@ import { api } from '../api';
 const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, playlists = [], addTrackToPlaylist = null, isDarkTheme = true }) => {
   const { playTrack } = useContext(MusicContext);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
-  const containerRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const handlePlayTrack = (track) => {
     playTrack(track, tracks);
@@ -33,11 +33,16 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
 
   const handlePlusClick = (e, track) => {
     e.stopPropagation();
+    e.preventDefault();
     setActiveDropdownId((prev) => (prev === track.id ? null : track.id));
   };
 
   useEffect(() => {
-    const handleDocClick = () => {
+    const handleDocClick = (e) => {
+      // Don't close if clicking on the button that opens it
+      if (buttonRef.current && buttonRef.current.contains(e.target)) {
+        return;
+      }
       setActiveDropdownId(null);
     };
     document.addEventListener('click', handleDocClick);
@@ -59,7 +64,7 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
   const gradient = isDarkTheme ? 'from-red-400 to-red-600' : 'from-purple-400 to-purple-600';
 
   return (
-    <div className="space-y-2" ref={containerRef}>
+    <div className="space-y-2">
       {tracks.map((track, index) => (
         <div
           key={track.id}
@@ -84,36 +89,43 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
           </div>
 
           <div className="flex items-center gap-2 ml-4 opacity-100 transition">
-            <button
-              onClick={(e) => handlePlusClick(e, track)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="text-gray-400 hover:text-white transition-colors duration-200 p-2 cursor-pointer text-xl"
-              title="Add to playlist"
-            >
-              +
-            </button>
+            <div className="relative">
+              <button
+                ref={buttonRef}
+                onClick={(e) => handlePlusClick(e, track)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="text-gray-400 hover:text-white transition-colors duration-200 p-2 cursor-pointer text-xl"
+                title="Add to playlist"
+              >
+                +
+              </button>
 
-            {activeDropdownId === track.id && (
-              <div onClick={(e) => e.stopPropagation()} className="absolute right-6 top-full mt-2 bg-[#282828] text-white border border-[#3e3e3e] rounded-md shadow-2xl py-1 w-48 z-50">
-                {playlists.length === 0 ? (
-                  <div className="px-4 py-2 text-sm text-slate-400">No playlists</div>
-                ) : (
-                  playlists.map((pl) => (
-                    <button
-                      key={pl.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDropdownId(null);
-                        if (addTrackToPlaylist) addTrackToPlaylist(track.id, pl.id);
-                      }}
-                      className="w-full text-left hover:bg-[#3e3e3e] px-4 py-2 text-sm"
-                    >
-                      {pl.name}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
+              {activeDropdownId === track.id && (
+                <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-[#282828] text-white border border-[#3e3e3e] rounded-md shadow-2xl py-1 w-48 z-50">
+                  {playlists.length === 0 ? (
+                    <div className="px-4 py-2 text-sm text-slate-400">No playlists</div>
+                  ) : (
+                    playlists.map((pl) => (
+                      <button
+                        key={pl.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (addTrackToPlaylist) {
+                            console.log(`Adding track ${track.id} to playlist ${pl.id}`);
+                            addTrackToPlaylist(track.id, pl.id);
+                          }
+                          setActiveDropdownId(null);
+                        }}
+                        className="w-full text-left hover:bg-[#3e3e3e] px-4 py-2 text-sm"
+                      >
+                        {pl.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
 
             {showPlaylistActions && (
               <button
