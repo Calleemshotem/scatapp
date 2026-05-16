@@ -5,7 +5,7 @@ import { api } from '../api';
 
 const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, playlists = [], addTrackToPlaylist = null, isDarkTheme = true }) => {
   const { playTrack } = useContext(MusicContext);
-  const [openFor, setOpenFor] = useState(null);
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
   const containerRef = useRef(null);
 
   const handlePlayTrack = (track) => {
@@ -33,18 +33,15 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
 
   const handlePlusClick = (e, track) => {
     e.stopPropagation();
-    setOpenFor((prev) => (prev === track.id ? null : track.id));
+    setActiveDropdownId((prev) => (prev === track.id ? null : track.id));
   };
 
   useEffect(() => {
-    const handleDocClick = (e) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target)) {
-        setOpenFor(null);
-      }
+    const handleDocClick = () => {
+      setActiveDropdownId(null);
     };
-    document.addEventListener('mousedown', handleDocClick);
-    return () => document.removeEventListener('mousedown', handleDocClick);
+    document.addEventListener('click', handleDocClick);
+    return () => document.removeEventListener('click', handleDocClick);
   }, []);
 
   if (!tracks || tracks.length === 0) {
@@ -89,14 +86,15 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
           <div className="flex items-center gap-2 ml-4 opacity-100 transition">
             <button
               onClick={(e) => handlePlusClick(e, track)}
+              onPointerDown={(e) => e.stopPropagation()}
               className="text-gray-400 hover:text-white transition-colors duration-200 p-2 cursor-pointer text-xl"
               title="Add to playlist"
             >
               +
             </button>
 
-            {openFor === track.id && (
-              <div className="absolute right-6 top-full mt-2 bg-[#282828] text-white border border-[#3e3e3e] rounded-md shadow-2xl py-1 w-48 z-50">
+            {activeDropdownId === track.id && (
+              <div onClick={(e) => e.stopPropagation()} className="absolute right-6 top-full mt-2 bg-[#282828] text-white border border-[#3e3e3e] rounded-md shadow-2xl py-1 w-48 z-50">
                 {playlists.length === 0 ? (
                   <div className="px-4 py-2 text-sm text-slate-400">No playlists</div>
                 ) : (
@@ -105,7 +103,7 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
                       key={pl.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenFor(null);
+                        setActiveDropdownId(null);
                         if (addTrackToPlaylist) addTrackToPlaylist(track.id, pl.id);
                       }}
                       className="w-full text-left hover:bg-[#3e3e3e] px-4 py-2 text-sm"
