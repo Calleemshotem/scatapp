@@ -1,6 +1,13 @@
 import React from 'react';
 
-const Sidebar = ({ currentView, onChangeView, playlists, onPlaylistClick, isDarkTheme }) => {
+const Sidebar = ({ currentView, onChangeView, playlists, onPlaylistClick, onCreatePlaylist, isDarkTheme }) => {
+  const handleCreatePlaylist = () => {
+    const name = prompt('Enter Playlist Name:');
+    if (name && name.trim()) {
+      onCreatePlaylist(name.trim());
+    }
+  };
+
   return (
     <aside className={`hidden md:flex flex-col w-64 ${isDarkTheme ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r h-screen fixed left-0 top-0 overflow-y-auto animate-slideInLeft transition-colors z-50`}>
       {/* Logo */}
@@ -34,6 +41,21 @@ const Sidebar = ({ currentView, onChangeView, playlists, onPlaylistClick, isDark
         >
           Your Library
         </button>
+
+        <div className="flex items-center justify-between px-4 mt-4">
+          <p className={`text-xs font-semibold ${isDarkTheme ? 'text-gray-500' : 'text-gray-600'} uppercase`}>
+            Playlists
+          </p>
+          <button
+            type="button"
+            onClick={handleCreatePlaylist}
+            className="text-gray-400 hover:text-white transition cursor-pointer rounded-full px-2 py-1 hover:bg-white/10"
+            aria-label="Create playlist"
+            title="Create playlist"
+          >
+            +
+          </button>
+        </div>
 
         <div className="py-4">
           <p className={`px-4 text-xs font-semibold ${isDarkTheme ? 'text-gray-500' : 'text-gray-600'} uppercase`}>Collections</p>

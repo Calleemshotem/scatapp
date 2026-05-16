@@ -141,6 +141,28 @@ const AppContent = () => {
     setShowAccountModal(true);
   };
 
+  const createNewPlaylist = async (name) => {
+    if (!name || !name.trim()) return;
+    const trimmedName = name.trim();
+    const newPlaylist = {
+      id: 'playlist_' + Date.now(),
+      name: trimmedName,
+      trackIds: [],
+    };
+
+    setPlaylists((prev) => [...prev, newPlaylist]);
+
+    if (navigator.onLine) {
+      try {
+        await api.createPlaylist(trimmedName);
+      } catch (err) {
+        console.warn('Failed to sync playlist creation online:', err);
+      }
+    }
+
+    return newPlaylist;
+  };
+
   useEffect(() => {
     const savedUser = window.localStorage.getItem('scat-user');
     if (savedUser) {
@@ -245,6 +267,7 @@ const AppContent = () => {
         onChangeView={setCurrentView}
         playlists={playlists}
         onPlaylistClick={handlePlaylistClick}
+        onCreatePlaylist={createNewPlaylist}
         isDarkTheme={isDarkTheme}
       />
 
