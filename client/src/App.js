@@ -182,27 +182,39 @@ const AppContent = () => {
   };
 
   const addTrackToPlaylist = async (trackId, playlistId) => {
-    const existing = playlists.find((playlist) => playlist.id === playlistId);
+    const trackIdString = trackId?.toString?.() ?? '';
+    const playlistIdString = playlistId?.toString?.() ?? '';
+    const existing = playlists.find((playlist) => playlist.id?.toString() === playlistIdString);
     if (!existing) return;
-    if (existing.trackIds?.includes(trackId)) return;
+    if ((existing.trackIds || []).map((id) => id.toString()).includes(trackIdString)) return;
 
-    const updateLocalPlaylist = () => {
-      setPlaylists((prev) => prev.map((playlist) => (
-        playlist.id === playlistId
-          ? { ...playlist, trackIds: [...new Set([...(playlist.trackIds || []), trackId])] }
-          : playlist
-      )));
-    };
+    console.log('Successfully added track:', trackIdString, 'to playlist:', playlistIdString);
+
+    const updatedPlaylists = playlists.map((playlist) => {
+      if (playlist.id?.toString() !== playlistIdString) return playlist;
+      const existingTrackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds : [];
+      return {
+        ...playlist,
+        trackIds: [...new Set([...existingTrackIds.map((id) => id.toString()), trackIdString])],
+      };
+    });
+
+    setPlaylists(updatedPlaylists);
+
+    try {
+      window.localStorage.setItem('scatapp_playlists', JSON.stringify(updatedPlaylists));
+    } catch (e) {
+      console.warn('Could not persist playlists to localStorage:', e);
+    }
 
     if (navigator.onLine) {
       try {
-        await api.addTrackToPlaylist(playlistId, trackId);
+        await api.addTrackToPlaylist(playlistIdString, trackIdString);
       } catch (err) {
         console.warn('Failed to sync add-to-playlist online, saving locally:', err);
       }
     }
 
-    updateLocalPlaylist();
     setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
   };
 
