@@ -1,3 +1,4 @@
+
 import React, { useContext, useMemo, useState } from 'react';
 import { MusicContext } from '../context/MusicContext';
 import { api } from '../api';
@@ -19,7 +20,7 @@ const formatPlaylistDuration = (seconds) => {
   return `${minutes} min`;
 };
 
-const PlaylistView = ({ playlist, tracks, onRemoveFromPlaylist, isDarkTheme }) => {
+const PlaylistView = ({ playlist, tracks, onRemoveFromPlaylist, onTrackContextMenu = null, isDarkTheme }) => {
   const { playTrack } = useContext(MusicContext);
   const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -133,6 +134,10 @@ const PlaylistView = ({ playlist, tracks, onRemoveFromPlaylist, isDarkTheme }) =
               key={track.id}
               onPointerDown={() => handlePlayTrack(track)}
               onClick={() => handlePlayTrack(track)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (onTrackContextMenu) onTrackContextMenu(e, track.id);
+              }}
               className="group grid grid-cols-[72px_minmax(0,1fr)_220px_96px] items-center gap-4 px-6 py-4 transition hover:bg-white/10 cursor-pointer"
             >
               <div className="flex items-center gap-3 text-slate-400">

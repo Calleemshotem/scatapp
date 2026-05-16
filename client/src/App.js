@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MusicProvider } from './context/MusicContext';
 import AudioPlayer from './components/AudioPlayer';
@@ -12,8 +13,20 @@ import { api } from './api';
 
 const AppContent = () => {
   const [currentView, setCurrentView] = useState({ type: 'home', id: null });
-  const [tracks, setTracks] = useState([]);
-  const [playlists, setPlaylists] = useState([]);
+  const [tracks, setTracks] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('scatapp_tracks')) || [];
+    } catch {
+      return [];
+    }
+  });
+  const [playlists, setPlaylists] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('scatapp_playlists')) || [];
+    } catch {
+      return [];
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -21,10 +34,27 @@ const AppContent = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, trackId: null });
 
   useEffect(() => {
     document.body.className = isDarkTheme ? 'dark-theme' : 'light-theme';
   }, [isDarkTheme]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('scatapp_tracks', JSON.stringify(tracks));
+    } catch (e) {
+      console.warn('Could not persist tracks to localStorage:', e);
+    }
+  }, [tracks]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('scatapp_playlists', JSON.stringify(playlists));
+    } catch (e) {
+      console.warn('Could not persist playlists to localStorage:', e);
+    }
+  }, [playlists]);
 
   useEffect(() => {
     fetchTracks();
@@ -36,24 +66,29 @@ const AppContent = () => {
       setLoading(true);
       const response = await api.getTracks(search);
       const data = response.data || [];
+
       if (Array.isArray(data) && data.length > 0) {
         setTracks(data);
-        try {
-          window.localStorage.setItem('scatapp_backup', JSON.stringify(data));
-        } catch (e) {
-          console.warn('Could not write backup to localStorage:', e);
-        }
       } else {
-        // API returned empty list - try loading backup
-        const backup = window.localStorage.getItem('scatapp_backup');
-        if (backup) setTracks(JSON.parse(backup));
-        else setTracks([]);
+        // Do not wipe local tracks on empty response; keep persistent state instead.
+        const backup = window.localStorage.getItem('scatapp_tracks');
+        if (backup) {
+          try {
+            setTracks(JSON.parse(backup));
+          } catch (e) {
+            console.error('Invalid stored tracks data', e);
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching tracks:', err);
-      const backup = window.localStorage.getItem('scatapp_backup');
+      const backup = window.localStorage.getItem('scatapp_tracks');
       if (backup) {
-        try { setTracks(JSON.parse(backup)); } catch (e) { console.error('Invalid backup data', e); setTracks([]); }
+        try {
+          setTracks(JSON.parse(backup));
+        } catch (e) {
+          console.error('Invalid stored tracks data', e);
+        }
       }
     } finally {
       setLoading(false);
@@ -63,10 +98,29 @@ const AppContent = () => {
   const fetchPlaylists = async () => {
     try {
       const response = await api.getPlaylists();
-      console.log('Fetched playlists:', response.data);
-      setPlaylists(response.data);
+      const data = response.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        setPlaylists(data);
+      } else {
+        const stored = window.localStorage.getItem('scatapp_playlists');
+        if (stored) {
+          try {
+            setPlaylists(JSON.parse(stored));
+          } catch (e) {
+            console.error('Invalid stored playlists data', e);
+          }
+        }
+      }
     } catch (err) {
       console.error('Error fetching playlists:', err);
+      const stored = window.localStorage.getItem('scatapp_playlists');
+      if (stored) {
+        try {
+          setPlaylists(JSON.parse(stored));
+        } catch (e) {
+          console.error('Invalid stored playlists data', e);
+        }
+      }
     }
   };
 
@@ -105,6 +159,55 @@ const AppContent = () => {
     setCurrentView({ type: 'home', id: null });
   };
 
+  const addTrackToPlaylist = async (trackId, playlistId) => {
+    const existing = playlists.find((playlist) => playlist.id === playlistId);
+    if (!existing) return;
+    if (existing.trackIds?.includes(trackId)) return;
+
+    const updateLocalPlaylist = () => {
+      setPlaylists((prev) => prev.map((playlist) => (
+        playlist.id === playlistId
+          ? { ...playlist, trackIds: [...new Set([...(playlist.trackIds || []), trackId])] }
+          : playlist
+      )));
+    };
+
+    if (navigator.onLine) {
+      try {
+        await api.addTrackToPlaylist(playlistId, trackId);
+      } catch (err) {
+        console.warn('Failed to sync add-to-playlist online, saving locally:', err);
+      }
+    }
+
+    updateLocalPlaylist();
+    setContextMenu({ visible: false, x: 0, y: 0, trackId: null });
+  };
+
+  const handleContextMenu = (event, trackId) => {
+    event.preventDefault();
+    setContextMenu({ visible: true, x: event.clientX, y: event.clientY, trackId });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu((prev) => prev.visible ? { ...prev, visible: false } : prev);
+    };
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setContextMenu((prev) => prev.visible ? { ...prev, visible: false } : prev);
+      }
+    };
+
+    window.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
   const activePlaylist = playlists.find((playlist) => playlist.id === currentView.id);
 
   const renderContent = () => {
@@ -114,6 +217,7 @@ const AppContent = () => {
           playlist={activePlaylist}
           tracks={tracks}
           onRemoveFromPlaylist={fetchPlaylists}
+          onTrackContextMenu={handleContextMenu}
           isDarkTheme={isDarkTheme}
         />
       );
@@ -124,7 +228,7 @@ const AppContent = () => {
         <h2 className={`text-2xl font-bold mb-6 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
           {currentView.type === 'home' ? 'Home' : 'Browse'}
         </h2>
-        <TrackList tracks={tracks} onTrackRemoved={fetchTracks} isDarkTheme={isDarkTheme} />
+        <TrackList tracks={tracks} onTrackRemoved={fetchTracks} onTrackContextMenu={handleContextMenu} isDarkTheme={isDarkTheme} />
       </div>
     );
   };
@@ -259,6 +363,40 @@ const AppContent = () => {
           onAuthSuccess={handleAuthSuccess}
           isDarkTheme={isDarkTheme}
         />
+
+        {contextMenu.visible && (
+          <div
+            className="fixed z-50 rounded-2xl border border-slate-700 bg-slate-950 p-2 shadow-2xl"
+            style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 220 }}
+            onContextMenu={(event) => event.preventDefault()}
+          >
+            <div className="group relative rounded-xl p-2 hover:bg-white/5 transition cursor-default">
+              <div className="flex items-center justify-between text-sm text-white font-medium">
+                <span>Add to Playlist</span>
+                <span className="text-slate-400">›</span>
+              </div>
+              <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute left-full top-0 ml-2 w-56 rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl transition-all duration-150">
+                {playlists.length === 0 ? (
+                  <div className="p-3 text-sm text-slate-400">No playlists yet</div>
+                ) : (
+                  playlists.map((playlist) => (
+                    <button
+                      key={playlist.id}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        addTrackToPlaylist(contextMenu.trackId, playlist.id);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-white/5 transition"
+                    >
+                      {playlist.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Players */}

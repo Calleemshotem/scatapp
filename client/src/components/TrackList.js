@@ -1,8 +1,9 @@
+
 import React, { useContext } from 'react';
 import { MusicContext } from '../context/MusicContext';
 import { api } from '../api';
 
-const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, isDarkTheme = true }) => {
+const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onTrackRemoved = null, onTrackContextMenu = null, isDarkTheme = true }) => {
   const { playTrack } = useContext(MusicContext);
 
   const handlePlayTrack = (track) => {
@@ -49,6 +50,10 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
           key={track.id}
           onPointerDown={() => handlePlayTrack(track)}
           onClick={() => handlePlayTrack(track)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            if (onTrackContextMenu) onTrackContextMenu(e, track.id);
+          }}
           className={`flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
           style={{ animationDelay: `${index * 0.1}s` }}
         >
