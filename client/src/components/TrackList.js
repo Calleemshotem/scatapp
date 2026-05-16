@@ -70,7 +70,9 @@ const TrackList = ({ tracks, showPlaylistActions = false, playlistId = null, onT
           key={track.id}
           onPointerDown={() => handlePlayTrack(track)}
           onClick={() => handlePlayTrack(track)}
-          className={`relative flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp`}
+          className={`relative flex items-center justify-between p-3 ${bgBase} ${bgHover} rounded transition cursor-pointer group transform hover:scale-101 animate-slideInUp ${
+            activeDropdownId === track.id ? 'z-40' : 'z-10'
+          }`}
           style={{ animationDelay: `${index * 0.1}s` }}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
