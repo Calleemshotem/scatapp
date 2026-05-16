@@ -6,15 +6,14 @@ import Sidebar from './components/Sidebar';
 import UploadModal from './components/UploadModal';
 import PlaylistModal from './components/PlaylistModal';
 import TrackList from './components/TrackList';
-import PlaylistDropdown from './components/PlaylistDropdown';
+import PlaylistView from './components/PlaylistView';
 import AccountModal from './components/AccountModal';
 import { api } from './api';
 
 const AppContent = () => {
-  const [activeTab, setActiveTab] = useState('discover');
+  const [currentView, setCurrentView] = useState({ type: 'home', id: null });
   const [tracks, setTracks] = useState([]);
   const [playlists, setPlaylists] = useState([]);
-  const [currentPlaylist, setCurrentPlaylist] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -99,109 +98,47 @@ const AppContent = () => {
 
   const handlePlaylistClick = (playlist) => {
     console.log('Switching to playlist:', playlist.id, 'Name:', playlist.name, 'Track IDs:', playlist.trackIds);
-    // Ensure trackIds are strings for consistency
-    const normalizedPlaylist = {
-      ...playlist,
-      trackIds: (playlist.trackIds || []).map(id => String(id)),
-      // Pre-filter tracks to ensure they match
-      tracks: (playlist.tracks || []).filter(track => {
-        const trackIdStr = String(track.id);
-        const hasTrack = playlist.trackIds?.some(pId => String(pId) === trackIdStr);
-        console.log(`Track ${track.title} (ID: ${track.id}, type: ${typeof track.id}) - in playlist: ${hasTrack}`);
-        return hasTrack;
-      })
-    };
-    console.log('Normalized playlist:', normalizedPlaylist);
-    setCurrentPlaylist(normalizedPlaylist);
-    setActiveTab(`playlist-${playlist.id}`);
+    setCurrentView({ type: 'playlist', id: playlist.id });
   };
 
-  const handleDeletePlaylist = async (playlistId) => {
-    try {
-      await api.deletePlaylist(playlistId);
-      fetchPlaylists();
-      if (currentPlaylist?.id === playlistId) {
-        setCurrentPlaylist(null);
-        setActiveTab('discover');
-      }
-    } catch (err) {
-      console.error('Error deleting playlist:', err);
-    }
+  const handleHomeClick = () => {
+    setCurrentView({ type: 'home', id: null });
   };
+
+  const activePlaylist = playlists.find((playlist) => playlist.id === currentView.id);
 
   const renderContent = () => {
-    if (activeTab === 'discover') {
+    if (currentView.type === 'playlist' && activePlaylist) {
       return (
-        <div className="animate-slideInUp">
-          <h2 className={`text-2xl font-bold mb-6 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-            Browse
-          </h2>
-          <TrackList tracks={tracks} onTrackRemoved={fetchTracks} isDarkTheme={isDarkTheme} />
-        </div>
+        <PlaylistView
+          playlist={activePlaylist}
+          tracks={tracks}
+          onRemoveFromPlaylist={fetchPlaylists}
+          isDarkTheme={isDarkTheme}
+        />
       );
     }
 
-    if (activeTab === 'liked') {
-      return (
-        <div className="animate-slideInUp">
-          <h2 className={`text-2xl font-bold mb-6 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-            Saved Items
-          </h2>
-          <TrackList tracks={tracks.filter(t => t.liked)} onTrackRemoved={fetchTracks} isDarkTheme={isDarkTheme} />
-        </div>
-      );
-    }
-
-    if (activeTab.startsWith('playlist-') && currentPlaylist) {
-      const playlistTracks = currentPlaylist.tracks || [];
-      console.log('Rendering playlist view:', currentPlaylist.id, 'Tracks:', playlistTracks.length);
-      return (
-        <div className="animate-slideInUp">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-                {currentPlaylist.name}
-              </h2>
-              <p className={`text-sm mt-1 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-                {playlistTracks.length} items
-              </p>
-            </div>
-            <button
-              onClick={() => handleDeletePlaylist(currentPlaylist.id)}
-              className={`${isDarkTheme ? 'text-red-500 hover:text-red-400' : 'text-purple-500 hover:text-purple-400'} p-2 transition cursor-pointer`}
-              title="Delete"
-            >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z" />
-              </svg>
-            </button>
-          </div>
-          <TrackList 
-            tracks={playlistTracks} 
-            showPlaylistActions={true}
-            playlistId={currentPlaylist.id}
-            onTrackRemoved={fetchPlaylists}
-            isDarkTheme={isDarkTheme}
-          />
-        </div>
-      );
-    }
-
-    return null;
+    return (
+      <div className="animate-slideInUp">
+        <h2 className={`text-2xl font-bold mb-6 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+          {currentView.type === 'home' ? 'Home' : 'Browse'}
+        </h2>
+        <TrackList tracks={tracks} onTrackRemoved={fetchTracks} isDarkTheme={isDarkTheme} />
+      </div>
+    );
   };
 
   const bgColor = isDarkTheme ? 'bg-gray-950' : 'bg-gray-100';
-  const sidebarBg = isDarkTheme ? 'bg-gray-900' : 'bg-white';
   const headerBg = isDarkTheme ? 'bg-gray-900' : 'bg-white';
   const accentColor = isDarkTheme ? 'from-red-600 to-red-500' : 'from-purple-600 to-purple-500';
-  const accentHover = isDarkTheme ? 'hover:bg-red-600' : 'hover:bg-purple-600';
 
   return (
     <div className={`flex flex-col md:flex-row h-screen md:h-[100dvh] ${bgColor} text-white overflow-hidden transition-colors relative`}>
       {/* Sidebar */}
       <Sidebar 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
+        currentView={currentView}
+        onChangeView={setCurrentView}
         playlists={playlists}
         onPlaylistClick={handlePlaylistClick}
         isDarkTheme={isDarkTheme}
@@ -271,23 +208,17 @@ const AppContent = () => {
       {/* Mobile Navigation */}
       <nav className={`md:hidden fixed bottom-20 left-0 right-0 ${isDarkTheme ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-t flex justify-around p-2 transition-colors z-20`}>
         <button
-          onClick={() => {
-            setActiveTab('discover');
-            setCurrentPlaylist(null);
-          }}
+          onClick={() => handleHomeClick()}
           className={`flex-1 py-2 text-center transition text-2xl ${
-            activeTab === 'discover' ? (isDarkTheme ? 'text-red-500' : 'text-purple-500') : (isDarkTheme ? 'text-gray-400' : 'text-gray-600')
+            currentView.type === 'home' ? (isDarkTheme ? 'text-red-500' : 'text-purple-500') : (isDarkTheme ? 'text-gray-400' : 'text-gray-600')
           }`}
         >
           ⊙
         </button>
         <button
-          onClick={() => {
-            setActiveTab('liked');
-            setCurrentPlaylist(null);
-          }}
+          onClick={() => handleHomeClick()}
           className={`flex-1 py-2 text-center transition text-2xl ${
-            activeTab === 'liked' ? (isDarkTheme ? 'text-red-500' : 'text-purple-500') : (isDarkTheme ? 'text-gray-400' : 'text-gray-600')
+            currentView.type === 'home' ? (isDarkTheme ? 'text-red-500' : 'text-purple-500') : (isDarkTheme ? 'text-gray-400' : 'text-gray-600')
           }`}
         >
           ★

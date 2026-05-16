@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Sidebar = ({ activeTab, onTabChange, playlists, onPlaylistClick, isDarkTheme }) => {
+const Sidebar = ({ currentView, onChangeView, playlists, onPlaylistClick, isDarkTheme }) => {
   return (
     <aside className={`hidden md:flex flex-col w-64 ${isDarkTheme ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r h-screen fixed left-0 top-0 overflow-y-auto animate-slideInLeft transition-colors z-50`}>
       {/* Logo */}
@@ -14,25 +14,25 @@ const Sidebar = ({ activeTab, onTabChange, playlists, onPlaylistClick, isDarkThe
       <nav className="flex-1 p-4 space-y-2">
         <button
           type="button"
-          onClick={() => onTabChange('discover')}
+          onClick={() => onChangeView({ type: 'home', id: null })}
           className={`w-full text-left px-4 py-3 rounded transition transform hover:scale-105 cursor-pointer ${
-            activeTab === 'discover'
+            currentView.type === 'home'
               ? (isDarkTheme ? 'bg-red-600 text-white' : 'bg-purple-600 text-white')
               : (isDarkTheme ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-100')
           }`}
         >
-          Browse
+          Home
         </button>
         <button
           type="button"
-          onClick={() => onTabChange('liked')}
+          onClick={() => onChangeView({ type: 'home', id: null })}
           className={`w-full text-left px-4 py-3 rounded transition transform hover:scale-105 cursor-pointer ${
-            activeTab === 'liked'
+            currentView.type === 'home'
               ? (isDarkTheme ? 'bg-red-600 text-white' : 'bg-purple-600 text-white')
               : (isDarkTheme ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-700 hover:text-purple-600 hover:bg-gray-100')
           }`}
         >
-          Saved
+          Your Library
         </button>
 
         <div className="py-4">
@@ -44,10 +44,11 @@ const Sidebar = ({ activeTab, onTabChange, playlists, onPlaylistClick, isDarkThe
                 type="button"
                 onClick={() => {
                   console.log('Sidebar: Clicked playlist button for:', playlist.id);
+                  onChangeView({ type: 'playlist', id: playlist.id });
                   onPlaylistClick(playlist);
                 }}
                 className={`w-full text-left px-4 py-2 rounded text-sm transition transform hover:scale-105 cursor-pointer ${
-                  activeTab === `playlist-${playlist.id}`
+                  currentView.type === 'playlist' && currentView.id === playlist.id
                     ? (isDarkTheme ? 'bg-gray-700 text-white' : 'bg-purple-100 text-purple-600')
                     : (isDarkTheme ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100')
                 }`}
