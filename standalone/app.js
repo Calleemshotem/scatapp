@@ -1,5 +1,4 @@
 (() => {
-  const fileInput = document.getElementById('fileInput');
   const searchInput = document.getElementById('searchInput');
   const selectedCount = document.getElementById('selectedCount');
   const playlistEl = document.getElementById('playlist');
@@ -14,16 +13,99 @@
   const seek = document.getElementById('seek');
 
   let tracks = [];
+  try {
+    tracks = JSON.parse(window.localStorage.getItem('scatapp_tracks') || '[]');
+    if (!Array.isArray(tracks)) tracks = [];
+  } catch {
+    tracks = [];
+  }
+  if (tracks.length === 0) {
+    try {
+      const backup = JSON.parse(window.localStorage.getItem('scatapp_backup') || '[]');
+      if (Array.isArray(backup) && backup.length > 0) tracks = backup;
+    } catch {
+      // ignore invalid backup
+    }
+  }
   let searchTerm = '';
   let playlists = JSON.parse(window.localStorage.getItem('scatapp_playlists') || '[]');
   let view = 'all';
   let current = -1;
   const audio = new Audio();
 
+  const saveTracks = () => {
+    try {
+      window.localStorage.setItem('scatapp_tracks', JSON.stringify(tracks));
+    } catch (e) {
+      console.warn('Could not persist standalone tracks:', e);
+    }
+  };
+
   const savePlaylists = () => {
-    window.localStorage.setItem('scatapp_playlists', JSON.stringify(playlists));
+    try {
+      window.localStorage.setItem('scatapp_playlists', JSON.stringify(playlists));
+    } catch (e) {
+      console.warn('Could not persist standalone playlists:', e);
+    }
     renderPlaylists();
   };
+
+  const contextMenuEl = document.createElement('div');
+  contextMenuEl.className = 'fixed z-50 hidden min-w-[220px] rounded-2xl border border-white/10 bg-[#0a0a0a] text-sm text-slate-100 shadow-2xl';
+  contextMenuEl.style.padding = '0.5rem';
+  document.body.appendChild(contextMenuEl);
+  contextMenuEl.style.display = 'none';
+
+  const hideContextMenu = () => {
+    contextMenuEl.style.display = 'none';
+    contextMenuEl.innerHTML = '';
+  };
+
+  const showContextMenu = (x, y, trackId) => {
+    contextMenuEl.innerHTML = '';
+    contextMenuEl.style.display = 'block';
+    contextMenuEl.style.left = `${x}px`;
+    contextMenuEl.style.top = `${y}px`;
+
+    const item = document.createElement('div');
+    item.className = 'group relative rounded-xl p-2 hover:bg-white/10 transition';
+    item.textContent = 'Add to Playlist';
+
+    const submenu = document.createElement('div');
+    submenu.className = 'absolute left-full top-0 hidden min-w-[200px] rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-2xl group-hover:block';
+
+    if (playlists.length === 0) {
+      const emptyItem = document.createElement('div');
+      emptyItem.className = 'px-4 py-3 text-slate-400';
+      emptyItem.textContent = 'No playlists yet';
+      submenu.appendChild(emptyItem);
+    } else {
+      playlists.forEach((playlist) => {
+        const playlistButton = document.createElement('button');
+        playlistButton.type = 'button';
+        playlistButton.className = 'w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-white/10 transition';
+        playlistButton.textContent = playlist.name;
+        playlistButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (!playlist.trackIds.includes(trackId)) {
+            playlist.trackIds.push(trackId);
+            savePlaylists();
+          }
+          hideContextMenu();
+        });
+        submenu.appendChild(playlistButton);
+      });
+    }
+
+    item.appendChild(submenu);
+    contextMenuEl.appendChild(item);
+  };
+
+  document.addEventListener('mousedown', (event) => {
+    if (!contextMenuEl.contains(event.target)) {
+      hideContextMenu();
+    }
+  });
 
   const createPlaylist = () => {
     const newPlaylist = {
@@ -106,12 +188,12 @@
           }
         }
       } else {
-        remoteTracks.forEach((t) => {
+        tracks = remoteTracks.map((t) => {
           const url = (t.url || '').startsWith('http') ? t.url : (`https://scatapp-production.up.railway.app${t.url}`);
-          tracks.push({ id: t.id || Date.now()+Math.random(), title: t.title || t.fileName || 'Untitled', artist: t.artist || '', album: t.album || '', url });
+          return { id: t.id || Date.now() + Math.random(), title: t.title || t.fileName || 'Untitled', artist: t.artist || '', album: t.album || '', url };
         });
 
-        // Save a local backup for offline/standalone usage
+        saveTracks();
         try {
           window.localStorage.setItem('scatapp_backup', JSON.stringify(tracks));
         } catch (e) {
@@ -163,6 +245,10 @@
         if (!e.target.closest('.track-menu')) {
           playIndex(trackIndex);
         }
+      });
+      div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, t.id);
       });
 
       const dropdown = div.querySelector('.track-dropdown');

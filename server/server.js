@@ -59,28 +59,29 @@ const loadData = () => {
   }
 };
 
+const readDataFile = () => {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+      return JSON.parse(fileContent || '{}');
+    }
+  } catch (err) {
+    console.error('Error reading data file:', err);
+  }
+  return { tracks: [], playlists: [] };
+};
+
+const writeDataFile = (data) => {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error writing data file:', err);
+  }
+};
+
 const saveData = () => {
   try {
-    let existingData = { tracks: [], playlists: [] };
-    
-    // Read existing data from disk first
-    if (fs.existsSync(DATA_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
-        existingData = JSON.parse(fileContent);
-      } catch (err) {
-        console.error('Error reading existing data:', err);
-      }
-    }
-
-    // Merge current in-memory data with what's on disk
-    // Use in-memory as source of truth for the current state
-    const dataToSave = {
-      tracks: tracks,
-      playlists: playlists
-    };
-    
-    fs.writeFileSync(DATA_FILE, JSON.stringify(dataToSave, null, 2));
+    writeDataFile({ tracks, playlists });
   } catch (err) {
     console.error('Error saving data:', err);
   }
@@ -109,6 +110,10 @@ app.post('/api/tracks', (req, res) => {
       return res.status(400).json({ error: 'title and url are required' });
     }
 
+    const fileData = readDataFile();
+    const existingTracks = Array.isArray(fileData.tracks) ? fileData.tracks : [];
+    const existingPlaylists = Array.isArray(fileData.playlists) ? fileData.playlists : [];
+
     const track = {
       id: uuidv4(),
       title: title || 'Untitled',
@@ -119,9 +124,11 @@ app.post('/api/tracks', (req, res) => {
       createdAt: new Date()
     };
 
-    tracks.push(track);
-    // Persist immediately to disk so server restarts don't lose data
-    saveData();
+    existingTracks.push(track);
+    tracks = existingTracks;
+    playlists = existingPlaylists;
+
+    writeDataFile({ tracks: existingTracks, playlists: existingPlaylists });
     return res.status(201).json(track);
   } catch (err) {
     console.error('Error creating track:', err);
@@ -134,6 +141,10 @@ app.post('/api/tracks/upload', upload.array('audio', 50), (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
   }
+
+  const fileData = readDataFile();
+  const existingTracks = Array.isArray(fileData.tracks) ? fileData.tracks : [];
+  const existingPlaylists = Array.isArray(fileData.playlists) ? fileData.playlists : [];
 
   const created = [];
   const artistFromBody = req.body.artist || 'Unknown Artist';
@@ -154,11 +165,13 @@ app.post('/api/tracks/upload', upload.array('audio', 50), (req, res) => {
       createdAt: new Date()
     };
 
-    tracks.push(track);
+    existingTracks.push(track);
     created.push(track);
   });
 
-  saveData(); // Save to file
+  tracks = existingTracks;
+  playlists = existingPlaylists;
+  writeDataFile({ tracks: existingTracks, playlists: existingPlaylists });
   res.status(201).json(created);
 });
 
@@ -178,6 +191,10 @@ app.post('/api/playlists', (req, res) => {
     return res.status(400).json({ error: 'Playlist name is required' });
   }
 
+  const fileData = readDataFile();
+  const existingTracks = Array.isArray(fileData.tracks) ? fileData.tracks : [];
+  const existingPlaylists = Array.isArray(fileData.playlists) ? fileData.playlists : [];
+
   const playlist = {
     id: uuidv4(),
     name,
@@ -185,8 +202,10 @@ app.post('/api/playlists', (req, res) => {
     createdAt: new Date()
   };
 
-  playlists.push(playlist);
-  saveData(); // Save to file
+  existingPlaylists.push(playlist);
+  tracks = existingTracks;
+  playlists = existingPlaylists;
+  writeDataFile({ tracks: existingTracks, playlists: existingPlaylists });
   res.status(201).json(playlist);
 });
 
@@ -194,17 +213,53 @@ app.post('/api/playlists', (req, res) => {
 app.post('/api/playlists/:playlistId/tracks', (req, res) => {
   const { playlistId } = req.params;
   const { trackId } = req.body;
+  const playlistIdString = playlistId?.toString?.() ?? '';
+  const trackIdString = trackId?.toString?.() ?? '';
 
-  const playlist = playlists.find(p => p.id === playlistId);
+  const fileData = readDataFile();
+  const existingTracks = Array.isArray(fileData.tracks) ? fileData.tracks : [];
+  const existingPlaylists = Array.isArray(fileData.playlists) ? fileData.playlists : [];
+
+  const playlist = existingPlaylists.find(p => p.id?.toString() === playlistIdString);
   if (!playlist) {
     return res.status(404).json({ error: 'Playlist not found' });
   }
 
-  if (!playlist.trackIds.includes(trackId)) {
-    playlist.trackIds.push(trackId);
+  const existingTrackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds.map((id) => id.toString()) : [];
+  if (!existingTrackIds.includes(trackIdString)) {
+    playlist.trackIds = [...(playlist.trackIds || []), trackIdString];
   }
 
-  saveData(); // Save to file
+  tracks = existingTracks;
+  playlists = existingPlaylists;
+  writeDataFile({ tracks: existingTracks, playlists: existingPlaylists });
+  res.json(playlist);
+});
+
+// Alias route for add semantics
+app.post('/api/playlists/:playlistId/add', (req, res) => {
+  const { playlistId } = req.params;
+  const { trackId } = req.body;
+  const playlistIdString = playlistId?.toString?.() ?? '';
+  const trackIdString = trackId?.toString?.() ?? '';
+
+  const fileData = readDataFile();
+  const existingTracks = Array.isArray(fileData.tracks) ? fileData.tracks : [];
+  const existingPlaylists = Array.isArray(fileData.playlists) ? fileData.playlists : [];
+
+  const playlist = existingPlaylists.find(p => p.id?.toString() === playlistIdString);
+  if (!playlist) {
+    return res.status(404).json({ error: 'Playlist not found' });
+  }
+
+  const existingTrackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds.map((id) => id.toString()) : [];
+  if (!existingTrackIds.includes(trackIdString)) {
+    playlist.trackIds = [...(playlist.trackIds || []), trackIdString];
+  }
+
+  tracks = existingTracks;
+  playlists = existingPlaylists;
+  writeDataFile({ tracks: existingTracks, playlists: existingPlaylists });
   res.json(playlist);
 });
 
