@@ -322,11 +322,7 @@ const AppContent = () => {
           </div>
         </header>
 
-        {notification && (
-          <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-md bg-[#1DB954] px-4 py-3 text-white font-semibold shadow-xl transition-opacity duration-300">
-            {notification}
-          </div>
-        )}
+        {/* notification placeholder moved to app root to avoid clipping */}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto scrollable p-4 md:p-6 pb-40 relative z-0">
@@ -403,6 +399,13 @@ const AppContent = () => {
       {/* Players */}
       <AudioPlayer />
       <PlayerControls isDarkTheme={isDarkTheme} />
+      {notification && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+          <div className="pointer-events-auto rounded-md bg-[#1DB954] px-4 py-3 text-white font-semibold shadow-xl transition-opacity duration-300">
+            {notification}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
